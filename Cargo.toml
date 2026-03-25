@@ -1,0 +1,8 @@
+[package]
+name = "rust_game_engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+fmod = "0.10.2"
+raylib = "5.5.1"
