@@ -22,26 +22,26 @@ impl Runtime {
     }
 
     pub fn execute(&mut self) -> Result<(), sdl3::Error> {
-        let target_frame_time = 1.0 / self.refresh_rate;
-        self.running = true;
+        let target_frame_time = std::time::Duration::from_secs_f32(1.0 / self.refresh_rate);
         let mut prev_frame = Instant::now();
+        self.running = true;
 
         println!("Runtime executed.");
 
         while self.running {
-            let current_frame = Instant::now();
-            let delta_time = current_frame.duration_since(prev_frame).as_secs_f32();
+            let frame_start = Instant::now();
+            let delta_time = frame_start.duration_since(prev_frame).as_secs_f32();
 
             self.update(delta_time)?;
             self.render(delta_time)?;
 
-            if delta_time < target_frame_time {
-                std::thread::sleep(std::time::Duration::from_secs_f32(
-                    target_frame_time - delta_time,
-                ));
+            let frame_time = frame_start.elapsed();
+
+            if frame_time < target_frame_time {
+                std::thread::sleep(target_frame_time - frame_time);
             }
 
-            prev_frame = current_frame;
+            prev_frame = frame_start;
         }
 
         println!("Runtime exited.");

@@ -1,7 +1,4 @@
-use sdl3::{
-    Sdl, VideoSubsystem, event::Event, keyboard::Keycode, pixels::Color, render::Canvas,
-    video::Window,
-};
+use sdl3::{Sdl, event::Event, keyboard::Keycode, pixels::Color, render::Canvas, video::Window};
 
 use crate::{
     runtime::Runtime,
@@ -13,7 +10,6 @@ use crate::{
 
 pub struct Renderer {
     pub context: Sdl,
-    pub video_system: VideoSubsystem,
     pub window_canvas: Canvas<Window>,
     pub window_size: VectorUnsigned,
     pub render_actions: Vec<fn(Box<&mut Canvas<Window>>, f32) -> Result<(), sdl3::Error>>,
@@ -26,6 +22,7 @@ impl Renderer {
 
         let window = video_system
             .window(process_name, process_size.x, process_size.y)
+            .position_centered()
             .resizable()
             .build()
             .unwrap();
@@ -33,7 +30,6 @@ impl Renderer {
 
         return Self {
             context,
-            video_system,
             window_canvas,
             window_size: process_size,
             render_actions: Vec::new(),
