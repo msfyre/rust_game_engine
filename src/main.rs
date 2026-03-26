@@ -4,11 +4,32 @@ use sdl3::{
     video::Window,
 };
 
-use crate::{runtime::Runtime, sdl::renderer::Renderer, types::vectors::VectorUnsigned};
+use crate::{
+    runtime::Runtime,
+    sdl::renderer::{Renderer, RendererAction},
+    types::{
+        objects::Square,
+        vectors::{VectorFloat, VectorUnsigned},
+    },
+};
 
 mod runtime;
 mod sdl;
 mod types;
+
+fn draw_square(window_canvas: Box<&mut Canvas<Window>>, dt: f32) -> Result<(), sdl3::Error> {
+    let window_size = window_canvas.output_size().unwrap();
+
+    let mut square = Square::new(50, Color::RED);
+    square.position = VectorFloat {
+        x: (window_size.0 / 2) as f32,
+        y: (window_size.1 / 2) as f32,
+    };
+
+    square.render(window_canvas)?;
+
+    return Ok(());
+}
 
 fn draw_debug_info(window_canvas: Box<&mut Canvas<Window>>, dt: f32) -> Result<(), sdl3::Error> {
     let window_size = window_canvas.output_size().unwrap();
@@ -29,25 +50,25 @@ fn draw_debug_info(window_canvas: Box<&mut Canvas<Window>>, dt: f32) -> Result<(
             y: 13 as f32,
         },
     )?;
-    window.draw_debug_text(
-        &size_string,
-        FPoint {
-            x: 0 as f32,
-            y: 8 as f32,
-        },
-    )?;
 
     return Ok(());
 }
 
 fn main() -> Result<(), sdl3::Error> {
-    const REFRESH_RATE: f32 = 60.0;
+    const REFRESH_RATE: f32 = 30.0;
 
     let mut renderer = Renderer::init("i hate rust callbacks", VectorUnsigned { x: 250, y: 200 });
     let mut runtime = Runtime::new(REFRESH_RATE);
 
-    renderer.render_actions.push(draw_debug_info);
+    renderer
+        .render_actions
+        .push(RendererAction::Function(draw_square));
+    renderer
+        .render_actions
+        .push(RendererAction::Function(draw_debug_info));
+
     renderer.begin_render(&mut runtime);
+
     runtime.execute()?;
     return Ok(());
 }

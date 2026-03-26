@@ -8,11 +8,16 @@ use crate::{
     },
 };
 
+pub enum RendererAction {
+    Function(fn(Box<&mut Canvas<Window>>, f32) -> Result<(), sdl3::Error>),
+    Method(Box<dyn FnMut(Box<&mut Canvas<Window>>, f32) -> Result<(), sdl3::Error>>),
+}
+
 pub struct Renderer {
     pub context: Sdl,
     pub window_canvas: Canvas<Window>,
     pub window_size: VectorUnsigned,
-    pub render_actions: Vec<fn(Box<&mut Canvas<Window>>, f32) -> Result<(), sdl3::Error>>,
+    pub render_actions: Vec<RendererAction>,
 }
 
 impl Renderer {
@@ -40,21 +45,22 @@ impl Renderer {
         let self_ref = self as *mut Self;
 
         runtime.subscribe_to_runtime(RuntimeEvent {
-            trigger: RuntimeEventTrigger::RENDER,
-            callback: RuntimeEventCallback::Method(Box::new(move |dt| unsafe {
-                (*self_ref).render_window(dt)
-            })),
-        });
-        runtime.subscribe_to_runtime(RuntimeEvent {
             trigger: RuntimeEventTrigger::UPDATE,
             callback: RuntimeEventCallback::MethodWithMutableRuntimeReference(Box::new(
                 move |_dt, runtime| unsafe { (*self_ref).poll_sdl_events(runtime) },
             )),
         });
+        runtime.subscribe_to_runtime(RuntimeEvent {
+            trigger: RuntimeEventTrigger::RENDER,
+            callback: RuntimeEventCallback::Method(Box::new(move |dt| unsafe {
+                (*self_ref).render_window(dt)
+            })),
+        });
     }
 
-    pub fn poll_sdl_events(&self, runtime: &mut Runtime) -> Result<(), sdl3::Error> {
+    fn poll_sdl_events(&self, runtime: &mut Runtime) -> Result<(), sdl3::Error> {
         let mut events = self.context.event_pump().unwrap();
+
         for event in events.poll_iter() {
             match event {
                 Event::Quit { .. } => {
@@ -76,8 +82,11 @@ impl Renderer {
         self.window_canvas.set_draw_color(Color::BLACK);
         self.window_canvas.clear();
 
-        for action in self.render_actions.iter() {
-            action(Box::new(&mut self.window_canvas), dt)?;
+        for action in self.render_actions.iter_mut() {
+            match action {
+                RendererAction::Function(f) => f(Box::new(&mut self.window_canvas), dt)?,
+                RendererAction::Method(f) => f(Box::new(&mut self.window_canvas), dt)?,
+            };
         }
 
         self.window_canvas.present();
