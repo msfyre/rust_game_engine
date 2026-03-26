@@ -11,13 +11,22 @@ mod sdl;
 mod types;
 
 fn test_render(window: Box<&mut Canvas<Window>>, dt: f32) -> Result<(), sdl3::Error> {
-    let formatted = format!("FPS: {}", 1.0 / dt);
+    let window_size = window.output_size().unwrap();
+    let fps_string = format!("FPS: {}", 1.0 / dt);
+    let size_string = format!("Size: {}x{}", window_size.0, window_size.1);
     window.set_draw_color(Color::WHITE);
     window.draw_debug_text(
-        &formatted,
+        &fps_string,
         FPoint {
             x: 0 as f32,
             y: 0 as f32,
+        },
+    )?;
+    window.draw_debug_text(
+        &size_string,
+        FPoint {
+            x: 0 as f32,
+            y: 8 as f32,
         },
     )?;
 

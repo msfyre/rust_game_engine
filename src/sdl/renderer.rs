@@ -1,6 +1,3 @@
-// NOTE TO WHOEVER IS GONNA EDIT THIS:
-// VSYNC SETTINGS WILL NOT BE ACKNOWLEDGED DUE TO LACK OF USAGE IN THE MAINSTREAM
-
 use sdl3::{
     Sdl, VideoSubsystem, event::Event, keyboard::Keycode, pixels::Color, render::Canvas,
     video::Window,
@@ -18,6 +15,7 @@ pub struct Renderer {
     pub context: Sdl,
     pub video_system: VideoSubsystem,
     pub window_canvas: Canvas<Window>,
+    pub window_size: VectorUnsigned,
     pub render_actions: Vec<fn(Box<&mut Canvas<Window>>, f32) -> Result<(), sdl3::Error>>,
 }
 
@@ -28,7 +26,7 @@ impl Renderer {
 
         let window = video_system
             .window(process_name, process_size.x, process_size.y)
-            .position_centered()
+            .resizable()
             .build()
             .unwrap();
         let window_canvas = window.into_canvas();
@@ -37,6 +35,7 @@ impl Renderer {
             context,
             video_system,
             window_canvas,
+            window_size: process_size,
             render_actions: Vec::new(),
         };
     }
@@ -86,6 +85,10 @@ impl Renderer {
         }
 
         self.window_canvas.present();
+        self.window_size = VectorUnsigned {
+            x: self.window_canvas.output_size().unwrap().0,
+            y: self.window_canvas.output_size().unwrap().1,
+        };
 
         return Ok(());
     }

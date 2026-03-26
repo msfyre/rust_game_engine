@@ -22,7 +22,7 @@ impl Runtime {
     }
 
     pub fn execute(&mut self) -> Result<(), sdl3::Error> {
-        let target_frame_time = 1000.0 / self.refresh_rate;
+        let target_frame_time = 1.0 / self.refresh_rate;
         self.running = true;
         let mut prev_frame = Instant::now();
 
@@ -43,6 +43,8 @@ impl Runtime {
 
             prev_frame = current_frame;
         }
+
+        println!("Runtime exited.");
 
         return Ok(());
     }
