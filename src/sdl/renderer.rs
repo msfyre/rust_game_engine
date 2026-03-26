@@ -1,4 +1,10 @@
-use sdl3::{VideoSubsystem, render::Canvas, video::Window};
+// NOTE TO WHOEVER IS GONNA EDIT THIS:
+// VSYNC SETTINGS WILL NOT BE ACKNOWLEDGED DUE TO LACK OF USAGE IN THE MAINSTREAM
+
+use sdl3::{
+    Sdl, VideoSubsystem, event::Event, keyboard::Keycode, pixels::Color, render::Canvas,
+    video::Window,
+};
 
 use crate::{
     runtime::Runtime,
@@ -9,6 +15,7 @@ use crate::{
 };
 
 pub struct Renderer {
+    pub context: Sdl,
     pub video_system: VideoSubsystem,
     pub window_canvas: Canvas<Window>,
     pub render_actions: Vec<fn(Box<&mut Canvas<Window>>, f32) -> Result<(), sdl3::Error>>,
@@ -27,6 +34,7 @@ impl Renderer {
         let window_canvas = window.into_canvas();
 
         return Self {
+            context,
             video_system,
             window_canvas,
             render_actions: Vec::new(),
@@ -35,16 +43,44 @@ impl Renderer {
 
     pub fn begin_render(&mut self, runtime: &mut Runtime) {
         let self_ref = self as *mut Self;
-        let method_boxed = Box::new(move |dt| unsafe { (*self_ref).render_window(dt) });
-        let event = RuntimeEvent {
-            trigger: RuntimeEventTrigger::RENDER,
-            callback: RuntimeEventCallback::Method(method_boxed),
-        };
 
-        runtime.subscribe_to_runtime(event);
+        runtime.subscribe_to_runtime(RuntimeEvent {
+            trigger: RuntimeEventTrigger::RENDER,
+            callback: RuntimeEventCallback::Method(Box::new(move |dt| unsafe {
+                (*self_ref).render_window(dt)
+            })),
+        });
+        runtime.subscribe_to_runtime(RuntimeEvent {
+            trigger: RuntimeEventTrigger::UPDATE,
+            callback: RuntimeEventCallback::MethodWithMutableRuntimeReference(Box::new(
+                move |_dt, runtime| unsafe { (*self_ref).poll_sdl_events(runtime) },
+            )),
+        });
+    }
+
+    pub fn poll_sdl_events(&self, runtime: &mut Runtime) -> Result<(), sdl3::Error> {
+        let mut events = self.context.event_pump().unwrap();
+        for event in events.poll_iter() {
+            match event {
+                Event::Quit { .. } => {
+                    runtime.stop();
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => {
+                    runtime.stop();
+                }
+                _ => {}
+            }
+        }
+        return Ok(());
     }
 
     fn render_window(&mut self, dt: f32) -> Result<(), sdl3::Error> {
+        self.window_canvas.set_draw_color(Color::BLACK);
+        self.window_canvas.clear();
+
         for action in self.render_actions.iter() {
             action(Box::new(&mut self.window_canvas), dt)?;
         }
